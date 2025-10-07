@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/transformer_db
+      - JWT_SECRET=change_me
+      - UPLOAD_DIR=/data/uploads
+    depends_on:
+      - mongo
+    volumes:
+      - ./uploads:/data/uploads
+  mongo:
+    image: mongo:6
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
