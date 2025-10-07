@@ -11,11 +11,14 @@ async function createTransformer(req, res, next){
 
 async function listTransformers(req, res, next){
   try{
-    const list = await transformerService.getUserTransformers(req.user._id);
-    // attach pending alerts count
+    // Return organisation's transformers as the authoritative list
+    const orgId = req.user.organisation;
+    const list = await transformerService.getOrganisationTransformers(orgId);
+    // attach pending alerts count and assignedToUser flag
     const transformersWithCounts = await Promise.all(list.map(async (t) => {
       const pending = await require('../models/alert.model').countDocuments({ transformer: t._id, read: false });
-      return Object.assign({}, t, { pendingAlerts: pending });
+      const assignedToUser = t.owner && t.owner._id && t.owner._id.toString() === req.user._id.toString();
+      return Object.assign({}, { id: t._id, name: t.name, installationDate: t.installationDate, metadata: t.metadata || {}, owner: t.owner || null, createdAt: t.createdAt, pendingAlerts: pending, assignedToUser });
     }));
     res.json(transformersWithCounts);
   }catch(err){ next(err); }
