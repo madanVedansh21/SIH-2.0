@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Backend for transformer FRA diagnostics platform",
   "main": "src/server.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
