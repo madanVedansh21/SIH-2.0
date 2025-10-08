@@ -11,10 +11,8 @@ async function createTransformer(req, res, next){
 
 async function listTransformers(req, res, next){
   try{
-    // Return organisation's transformers as the authoritative list
     const orgId = req.user.organisation;
     const list = await transformerService.getOrganisationTransformers(orgId);
-    // attach pending alerts count and assignedToUser flag
     const transformersWithCounts = await Promise.all(list.map(async (t) => {
       const pending = await require('../models/alert.model').countDocuments({ transformer: t._id, read: false });
       const assignedToUser = t.owner && t.owner._id && t.owner._id.toString() === req.user._id.toString();
@@ -49,10 +47,23 @@ async function deleteTransformer(req, res, next){
 async function uploadTestFile(req, res, next){
   try{
     if(!req.file) return res.status(400).json({ error: 'File required' });
-    // parse file
+    // verify transformer exists and belongs to user's organisation
+    const transformer = await transformerService.getTransformerById(req.params.transformerId);
+    if(!transformer) return res.status(404).json({ error: 'Transformer not found' });
+    const org = req.user.organisation && req.user.organisation.toString();
+    // ensure transformer id is included in organisation's list when possible
+    const Organisation = require('../models/organisation.models');
+    const organisation = org ? await Organisation.findById(org).lean() : null;
+    if(organisation && Array.isArray(organisation.totalTransformers) && !organisation.totalTransformers.map(id => id.toString()).includes(transformer._id.toString())){
+      return res.status(403).json({ error: 'Forbidden: transformer not in your organisation' });
+    }
+
+    // parse file from buffer (no disk storage)
     const parser = require('../utils/parseFile');
-    const parsed = await parser.parseFile(req.file.path);
-    const test = await testService.createTestRecord({ transformerId: req.params.transformerId, fileRecord: req.file, parsedData: parsed, testDate: parsed.testDate || new Date() });
+    const parsed = await parser.parseFile(req.file);
+    // build a minimal fileRecord we store (no uploadPath)
+    const fileRecord = { filename: req.file.originalname, originalname: req.file.originalname, mimetype: req.file.mimetype };
+    const test = await testService.createTestRecord({ transformerId: req.params.transformerId, fileRecord, parsedData: parsed, testDate: parsed.testDate || new Date(), uploaderId: req.user._id });
     res.status(201).json(test);
   }catch(err){ next(err); }
 }

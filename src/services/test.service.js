@@ -3,30 +3,33 @@ const Transformer = require('../models/transformer.model');
 const Alert = require('../models/alert.model');
 const mlClient = require('./ml.client');
 
-async function createTestRecord({ transformerId, fileRecord, parsedData, testDate }){
+async function createTestRecord({ transformerId, fileRecord, parsedData, testDate, uploaderId }){
   const test = new Test({
     transformer: transformerId,
     filename: fileRecord.filename,
     originalName: fileRecord.originalname,
-    uploadPath: fileRecord.path || fileRecord.uploadPath,
+    // Note: files are not stored on disk in memory mode; no uploadPath
+    uploadPath: null,
     fileType: fileRecord.mimetype || fileRecord.type,
     testDate: testDate || new Date(),
     rawData: parsedData,
     status: 'processing'
   });
   await test.save();
-
   // send to ML model asynchronously
   mlClient.send(parsedData, test._id)
     .then(async (inference) => {
       test.analysisSummary = inference.summary || {};
       test.status = 'completed';
+      test.mlRequestId = inference.requestId || null;
+      test.mlResponse = inference || {};
+      test.processedAt = new Date();
       await test.save();
 
       // create alerts if any
       if(inference.alerts && inference.alerts.length){
         const alerts = inference.alerts.map(a => ({
-          user: a.user || null,
+          user: a.user || uploaderId || null,
           transformer: transformerId,
           test: test._id,
           message: a.message,
@@ -39,6 +42,8 @@ async function createTestRecord({ transformerId, fileRecord, parsedData, testDat
     .catch(async (err) => {
       test.status = 'failed';
       test.analysisSummary = { error: err.message };
+      test.mlResponse = { error: err.message };
+      test.processedAt = new Date();
       await test.save();
     });
 

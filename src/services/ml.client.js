@@ -7,7 +7,9 @@ async function send(parsedData, testId){
     try{
       const res = await fetch(config.mlApiUrl, { method: 'POST', body: JSON.stringify({ testId, data: parsedData }), headers: { 'Content-Type': 'application/json' } });
       if(!res.ok) throw new Error('ML API error');
-      return res.json();
+      const json = await res.json();
+      // expect ML API to optionally return a requestId
+      return json;
     }catch(err){
       throw err;
     }
@@ -17,6 +19,7 @@ async function send(parsedData, testId){
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({
+        requestId: `mock-${Date.now()}`,
         summary: { classification: 'normal', score: 0.02 },
         alerts: []
       });
