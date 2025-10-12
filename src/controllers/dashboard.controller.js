@@ -1,7 +1,6 @@
 const Transformer = require('../models/transformer.model');
 const Organisation = require('../models/organisation.models');
-const Alert = require('../models/alert.model');
-const User = require('../models/user.models');
+const User = require('../models/user.model');
 
 async function getDashboard(req, res, next){
   try{
@@ -22,12 +21,11 @@ async function getDashboard(req, res, next){
         .lean();
 
       // attach pending alerts and assignedToUser flag to each org transformer
-      orgTransformers = await Promise.all(orgTransformers.map(async (t) => {
-        const pending = await Alert.countDocuments({ transformer: t._id, read: false });
+      orgTransformers = orgTransformers.map((t) => {
         const ownerId = t.owner ? (t.owner._id ? t.owner._id.toString() : t.owner.toString()) : null;
         const assignedToUser = ownerId && ownerId === user._id.toString();
-        return { id: t._id, name: t.name, installationDate: t.installationDate, metadata: t.metadata || {}, owner: t.owner || null, createdAt: t.createdAt, pendingAlerts: pending, assignedToUser };
-      }));
+        return { id: t._id, name: t.name, installationDate: t.installationDate, metadata: t.metadata || {}, owner: t.owner || null, createdAt: t.createdAt, pendingAlerts: 0, assignedToUser };
+      });
     }
 
     // Organisation summary fields

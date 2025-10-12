@@ -6,7 +6,7 @@ const config = require('./config');
 const authRoutes = require('./routes/auth');
 const transformerRoutes = require('./routes/transformers');
 const testRoutes = require('./routes/tests');
-const alertRoutes = require('./routes/alerts');
+// alert routes removed
 const dashboardRoutes = require('./routes/dashboard');
 const { errorHandler } = require('./middleware/error');
 
@@ -23,7 +23,7 @@ mongoose.connect(config.dbUri, { useNewUrlParser: true, useUnifiedTopology: true
 app.use('/auth', authRoutes);
 app.use('/transformers', transformerRoutes);
 app.use('/tests', testRoutes);
-app.use('/alerts', alertRoutes);
+// alerts endpoint removed
 app.use('/dashboard', dashboardRoutes);
 
 app.get('/', (req, res) => res.json({ ok: true, message: 'Transformer Diagnostics API' }));

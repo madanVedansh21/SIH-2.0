@@ -1,7 +1,6 @@
 const Transformer = require('../models/transformer.model');
 const Test = require('../models/test.model');
-const Alert = require('../models/alert.model');
-const User = require('../models/user.models');
+const User = require('../models/user.model');
 const Organisation = require('../models/organisation.models');
 
 async function createTransformer(data){
@@ -48,7 +47,6 @@ async function deleteTransformer(id){
   // find transformer to get owner/org info
   const t = await Transformer.findById(id).lean();
   await Test.deleteMany({ transformer: id });
-  await Alert.deleteMany({ transformer: id });
 
   try{
     if(t && t.owner){
