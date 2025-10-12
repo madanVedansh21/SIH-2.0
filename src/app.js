@@ -1,3 +1,4 @@
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -6,27 +7,37 @@ const config = require('./config');
 const authRoutes = require('./routes/auth');
 const transformerRoutes = require('./routes/transformers');
 const testRoutes = require('./routes/tests');
-// alert routes removed
 const dashboardRoutes = require('./routes/dashboard');
 const { errorHandler } = require('./middleware/error');
 
+
 const app = express();
+
 
 app.use(cors());
 app.use(express.json());
-app.use(morgan('dev'));
 
-mongoose.connect(config.dbUri, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error', err));
+// Environment-based logging
+if (process.env.NODE_ENV === 'production') {
+  app.use(morgan('combined')); // Production format
+} else {
+  app.use(morgan('dev'));
+}
 
+// Route registration
 app.use('/auth', authRoutes);
 app.use('/transformers', transformerRoutes);
 app.use('/tests', testRoutes);
-// alerts endpoint removed
 app.use('/dashboard', dashboardRoutes);
 
-app.get('/', (req, res) => res.json({ ok: true, message: 'Transformer Diagnostics API' }));
+mongoose
+  .connect(config.dbUri, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => console.error('MongoDB connection error', err));
+
+app.get("/", (req, res) =>
+  res.json({ ok: true, message: "Transformer Diagnostics API" })
+);
 
 app.use(errorHandler);
 
