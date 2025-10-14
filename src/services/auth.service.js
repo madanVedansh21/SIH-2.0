@@ -2,7 +2,6 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 const Organisation = require("../models/organisation.models");
 const config = require("../config");
-const User = require("../models/user.model");
 
 async function signup({ name, email, password, role, organisation }) {
   // Add a log to see exactly what value is being received for the organisation.
