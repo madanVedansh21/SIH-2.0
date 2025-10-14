@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 const Organisation = require("../models/organisation.models");
 const config = require("../config");
+const User = require("../models/user.model");
 
 async function signup({ name, email, password, role, organisation }) {
   // Add a log to see exactly what value is being received for the organisation.
@@ -56,6 +57,16 @@ async function signup({ name, email, password, role, organisation }) {
     { expiresIn: config.jwtExpiresIn }
   );
 
+  // Reconcile organisation user counts so dashboard shows correct numbers
+  try {
+    await syncOrganisationUserCounts(orgDoc._id);
+  } catch (err) {
+    console.error(
+      "[AuthService] Failed to sync organisation user counts after signup",
+      err.message || err
+    );
+  }
+
   return { user, token };
 }
 
@@ -69,7 +80,37 @@ async function login({ email, password }) {
     config.jwtSecret,
     { expiresIn: config.jwtExpiresIn }
   );
+  // After login, reconcile organisation user counts to ensure dashboard shows correct numbers
+  try {
+    if (user.organisation) await syncOrganisationUserCounts(user.organisation);
+  } catch (err) {
+    console.error(
+      "[AuthService] Failed to sync organisation user counts after login",
+      err.message || err
+    );
+  }
+
   return { user, token };
+}
+
+async function syncOrganisationUserCounts(orgId) {
+  if (!orgId) return;
+  try {
+    const [fieldEngineerCount, assetManagerCount] = await Promise.all([
+      User.countDocuments({ organisation: orgId, role: "field-engineer" }),
+      User.countDocuments({ organisation: orgId, role: "asset-manager" }),
+    ]);
+    await Organisation.findByIdAndUpdate(orgId, {
+      totalFieldEngineers: fieldEngineerCount,
+      totalAssetManagers: assetManagerCount,
+    });
+  } catch (err) {
+    // don't throw - allow caller to continue even if sync fails
+    console.error(
+      "[AuthService] Error syncing organisation user counts",
+      err.message || err
+    );
+  }
 }
 
 module.exports = { signup, login };

@@ -80,10 +80,16 @@ async function uploadTestFile(req, res, next) {
     );
     if (!transformer)
       return res.status(404).json({ error: "Transformer not found" });
-    const org = req.user.organisation && req.user.organisation.toString();
+    // normalize organisation id
+    const orgId =
+      req.user && req.user.organisation
+        ? req.user.organisation.toString()
+        : null;
     // ensure transformer id is included in organisation's list when possible
     const Organisation = require("../models/organisation.models");
-    const organisation = org ? await Organisation.findById(org).lean() : null;
+    const organisation = orgId
+      ? await Organisation.findById(orgId).lean()
+      : null;
     if (
       organisation &&
       Array.isArray(organisation.totalTransformers) &&
