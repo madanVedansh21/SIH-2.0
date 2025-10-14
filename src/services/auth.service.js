@@ -49,7 +49,14 @@ async function signup({ name, email, password, role, organisation }) {
     organisation: orgDoc._id,
   });
 
-  return user;
+  // Create a JWT for the newly created user (same approach as login)
+  const token = jwt.sign(
+    { id: user._id, email: user.email },
+    config.jwtSecret,
+    { expiresIn: config.jwtExpiresIn }
+  );
+
+  return { user, token };
 }
 
 async function login({ email, password }) {

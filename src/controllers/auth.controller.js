@@ -5,10 +5,12 @@ async function signup(req, res, next) {
     // ADDING THIS LOG to see exactly what the frontend sends.
     console.log("Received signup request with body:", req.body);
 
-    const user = await authService.signup(req.body);
-    res
-      .status(201)
-      .json({ user: { id: user._id, name: user.name, email: user.email } });
+    // authService.signup now returns { user, token }
+    const { user, token } = await authService.signup(req.body);
+    res.status(201).json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email },
+    });
   } catch (err) {
     next(err);
   }
