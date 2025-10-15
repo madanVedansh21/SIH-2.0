@@ -7,9 +7,8 @@ async function listTests(req, res, next) {
     if (!mongoose.Types.ObjectId.isValid(transformerId)) {
       return res.status(400).json({ error: "Invalid transformer id" });
     }
-    const list = await testService.listTests(transformerId);
-    // Provide an `id` alias for `_id` to keep frontend usage consistent
-    const mapped = list.map((t) => ({ ...t, id: t._id }));
+    // Any authenticated user can delete
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
     res.json(mapped);
   } catch (err) {
     next(err);
@@ -66,4 +65,23 @@ async function unapproveTest(req, res, next) {
   }
 }
 
-module.exports = { listTests, getTest, approveTest, unapproveTest };
+async function deleteTest(req, res, next) {
+  try {
+    const { testId } = req.params;
+    const mongoose = require("mongoose");
+    if (!mongoose.Types.ObjectId.isValid(testId)) {
+      return res.status(400).json({ error: "Invalid test id" });
+    }
+    // Only asset-ma  nagers can delete for now (simple rule); can be extended to owner-based
+    if (!req.user || req.user.role !== "asset-manager")
+      return res.status(403).json({ error: "Forbidden" });
+
+    const result = await testService.deleteTestAndUnlink(testId);
+    if (!result) return res.status(404).json({ error: "Not found" });
+    res.json({ ok: true, deletedId: testId });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listTests, getTest, approveTest, unapproveTest, deleteTest };

@@ -106,4 +106,27 @@ async function setApproval(testId, approved, approverId, comment) {
   return updated;
 }
 
-module.exports = { createTestRecord, listTests, getTestDetails, setApproval };
+async function deleteTestAndUnlink(testId) {
+  // Find the test to get transformer reference first
+  const test = await Test.findById(testId).lean();
+  if (!test) return null;
+  // Delete test
+  await Test.deleteOne({ _id: testId });
+  // Unlink from transformer.tests
+  try {
+    await Transformer.findByIdAndUpdate(test.transformer, {
+      $pull: { tests: test._id },
+    });
+  } catch (e) {
+    // non-fatal
+  }
+  return { ok: true };
+}
+
+module.exports = {
+  createTestRecord,
+  listTests,
+  getTestDetails,
+  setApproval,
+  deleteTestAndUnlink,
+};
