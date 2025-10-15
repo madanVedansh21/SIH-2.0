@@ -35,9 +35,8 @@ async function getTest(req, res, next) {
 
 async function approveTest(req, res, next) {
   try {
-    // only asset-managers may approve
-    if (!req.user || req.user.role !== "asset-manager")
-      return res.status(403).json({ error: "Forbidden" });
+    // Any authenticated user can approve
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
     const updated = await testService.setApproval(
       req.params.testId,
       true,
@@ -53,8 +52,8 @@ async function approveTest(req, res, next) {
 
 async function unapproveTest(req, res, next) {
   try {
-    if (!req.user || req.user.role !== "asset-manager")
-      return res.status(403).json({ error: "Forbidden" });
+    // Any authenticated user can unapprove
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
     const updated = await testService.setApproval(
       req.params.testId,
       false,

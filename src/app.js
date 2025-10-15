@@ -10,6 +10,8 @@ const dashboardRoutes = require("./routes/dashboard");
 const { errorHandler } = require("./middleware/error");
 const fetch = require("node-fetch");
 
+const liveDataRoutes = require("./routes/liveData");
+
 const app = express();
 
 app.use(cors());
@@ -27,6 +29,8 @@ app.use("/auth", authRoutes);
 app.use("/transformers", transformerRoutes);
 app.use("/tests", testRoutes);
 app.use("/dashboard", dashboardRoutes);
+
+app.use("/live-data", liveDataRoutes);
 
 mongoose
   .connect(config.dbUri, { useNewUrlParser: true, useUnifiedTopology: true })
