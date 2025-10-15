@@ -23,6 +23,16 @@ async function createTestRecord({
     status: "processing",
   });
   await test.save();
+  // Link this test to the transformer document for easy lookup
+  try {
+    await Transformer.findByIdAndUpdate(
+      transformerId,
+      { $addToSet: { tests: test._id } },
+      { new: false }
+    );
+  } catch (linkErr) {
+    // Non-fatal: proceed even if linking fails
+  }
   // send to ML model asynchronously
   const mlPromise = uploadedFile
     ? mlClient.sendFile(uploadedFile, test._id)
@@ -31,6 +41,16 @@ async function createTestRecord({
   mlPromise
     .then(async (inference) => {
       test.analysisSummary = inference.summary || {};
+      // Store full structured AI result if provided by ML API
+      if (inference.result) {
+        test.aiResult = inference.result;
+      } else if (inference.diagnosis || inference.recommendations) {
+        // Some APIs may return top-level properties already in the requested shape
+        test.aiResult = {
+          diagnosis: inference.diagnosis || {},
+          recommendations: inference.recommendations || {},
+        };
+      }
       test.status = "completed";
       test.mlRequestId = inference.requestId || null;
       test.mlResponse = inference || {};
@@ -66,4 +86,24 @@ async function getTestDetails(testId) {
   return { test, graphData };
 }
 
-module.exports = { createTestRecord, listTests, getTestDetails };
+async function setApproval(testId, approved, approverId, comment) {
+  const update = {};
+  if (approved) {
+    update.approved = true;
+    update.approvedBy = approverId;
+    update.approvedAt = new Date();
+    // optionally store comment in analysisSummary.approvalComment
+    if (comment) update["analysisSummary.approvalComment"] = comment;
+  } else {
+    update.approved = false;
+    update.approvedBy = null;
+    update.approvedAt = null;
+    if (comment) update["analysisSummary.unapprovalReason"] = comment;
+  }
+  const updated = await Test.findByIdAndUpdate(testId, update, {
+    new: true,
+  }).lean();
+  return updated;
+}
+
+module.exports = { createTestRecord, listTests, getTestDetails, setApproval };

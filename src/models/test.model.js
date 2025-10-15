@@ -17,8 +17,14 @@ const TestSchema = new mongoose.Schema({
     enum: ["pending", "processing", "completed", "failed"],
     default: "pending",
   },
+  // Approval fields: whether the test result has been approved by an authorised user
+  approved: { type: Boolean, default: false },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  approvedAt: { type: Date },
   analysisSummary: { type: Object, default: {} },
   rawData: { type: Object, default: {} },
+  // Full structured AI result (diagnosis, recommendations, etc.)
+  aiResult: { type: Object, default: {} },
   mlRequestId: { type: String },
   mlResponse: { type: Object, default: {} },
   processedAt: { type: Date },

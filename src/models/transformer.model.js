@@ -4,6 +4,17 @@ const TransformerSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, index: true },
   installationDate: { type: Date },
   metadata: { type: Object, default: {} },
+  // All tests performed on this transformer
+  tests: {
+    type: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Test",
+        index: true,
+      },
+    ],
+    default: [],
+  },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
