@@ -127,7 +127,14 @@ async function uploadTestFile(req, res, next) {
       uploaderId: req.user._id,
       uploadedFile: req.file,
     });
-    res.status(201).json(test);
+    // Add id alias for frontend convenience
+    res
+      .status(201)
+      .json(
+        Object.assign({}, test.toObject ? test.toObject() : test, {
+          id: test._id,
+        })
+      );
   } catch (err) {
     next(err);
   }
