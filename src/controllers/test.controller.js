@@ -9,6 +9,9 @@ async function listTests(req, res, next) {
     }
     // Any authenticated user can delete
     if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+    const list = await testService.listTests(transformerId);
+    // Provide an `id` alias for `_id` to keep frontend usage consistent
+    const mapped = list.map((t) => ({ ...t, id: t._id }));
     res.json(mapped);
   } catch (err) {
     next(err);
