@@ -10,7 +10,10 @@ async function send(parsedData, testId) {
         body: JSON.stringify({ testId, data: parsedData }),
         headers: { "Content-Type": "application/json" },
       });
-      if (!res.ok) throw new Error("ML API error");
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`ML API error ${res.status}: ${body}`);
+      }
       const json = await res.json();
       // Attach testId so callers can always link responses to the Test
       return Object.assign({ testId }, json);
@@ -69,18 +72,49 @@ async function sendFile(file, testId) {
   // file: { buffer: Buffer, originalname?: string, mimetype?: string }
   if (config.mlApiUrl) {
     try {
+      // First attempt: JSON + base64 (current contract)
       const payload = {
         testId,
         filename: file.originalname || "upload",
         mimetype: file.mimetype || "application/octet-stream",
         contentBase64: file.buffer ? file.buffer.toString("base64") : null,
       };
-      const res = await fetch(config.mlApiUrl, {
+      let res = await fetch(config.mlApiUrl, {
         method: "POST",
         body: JSON.stringify(payload),
         headers: { "Content-Type": "application/json" },
       });
-      if (!res.ok) throw new Error("ML API error");
+
+      // If server rejects JSON with validation (e.g., FastAPI 422/415/400), retry as multipart/form-data
+      if (!res.ok && [400, 415, 422].includes(res.status)) {
+        try {
+          const FormData = require("form-data");
+          const form = new FormData();
+          // Common FastAPI pattern: field name 'file'
+          form.append("file", file.buffer, {
+            filename: file.originalname || "upload.csv",
+            contentType: file.mimetype || "text/csv",
+          });
+          // Provide both naming styles for server-side convenience
+          form.append("testId", String(testId));
+          form.append("test_id", String(testId));
+          if (file.originalname) form.append("filename", file.originalname);
+          if (file.mimetype) form.append("mimetype", file.mimetype);
+
+          res = await fetch(config.mlApiUrl, {
+            method: "POST",
+            body: form,
+            headers: form.getHeaders(),
+          });
+        } catch (fallbackErr) {
+          // If form-data isn't available or something else fails, surface original response
+        }
+      }
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`ML API error ${res.status}: ${body}`);
+      }
       const json = await res.json();
       return Object.assign({ testId }, json);
     } catch (err) {
